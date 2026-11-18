@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plano Interactivo | Proyecto El Calvario - SMAL Desarrollo & Comercialización</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter, Plus Jakarta Sans & Oswald para tipografía condensada SMAL -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        condensed: ['Oswald', 'sans-serif'],
+                    },
+                    colors: {
+                        smal: {
+                            black: '#0B0B0B',
+                            charcoal: '#111111',
+                            gold: '#F5B81C',
+                            goldDeep: '#E5A400',
+                            goldLight: '#FCD34D',
+                            sand: '#F6F4EF',
+                            sandBorder: '#E2DDD2',
+                            forest: '#1E4D3B',
+                            emerald: '#15803D',
+                            crimson: '#DC2626',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Paleta clara en tono arena suave para máxima legibilidad y alto contraste */
+        body {
+            background-color: #F6F4EF;
+            color: #111111;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Retícula topográfica sutil sobre papel blanco puro para el plano */
+        .topo-canvas-bg {
+            background-color: #FFFFFF;
+            background-image: 
+                linear-gradient(to right, rgba(17, 17, 17, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(17, 17, 17, 0.04) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Animación del puntero guía 👆 */
+        @keyframes pointerBounce {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+            }
+            50% {
+                transform: translate(-5px, -9px) scale(1.12);
+            }
+        }
+
+        .pointer-guide {
+            animation: pointerBounce 1.4s ease-in-out infinite;
+            filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.32));
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+
+        /* Estilos de los lotes SVG con líneas negras definidas */
+        .lot-group {
+            cursor: pointer;
+            transition: opacity 0.25s ease;
+        }
+
+        .lot-shape {
+            stroke: #111111;
+            stroke-width: 1.7px;
+            transition: all 0.18s ease;
+        }
+
+        .lot-group:hover .lot-shape {
+            stroke-width: 3px;
+            fill: #FEF9E7;
+        }
+
+        .lot-group.selected .lot-shape {
+            stroke: #111111;
+            stroke-width: 3.4px;
+            fill: #FEF3C7;
+        }
+
+        .lot-group.dimmed {
+            opacity: 0.22;
+        }
+
+        /* Pulso suave en anillo de selección */
+        @keyframes pulseRing {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .selected-outline {
+            animation: pulseRing 1.6s infinite;
+        }
+
+        /* Ocultar barra de scroll horizontal en móviles */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-smal-gold selection:text-smal-black">
+
+    <!-- ==================== ENCABEZADO CORPORATIVO NEGRO CARBÓN & DORADO ==================== -->
+    <header class="bg-smal-charcoal text-white shadow-xl border-b-2 border-smal-gold sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                
+                <!-- Logo Oficial SMAL (Casa con alas y raíces en dorado sobre negro profundo) + Título -->
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3.5">
+                        
+                        <!-- Contenedor del Logo Oficial SMAL con opción de subir imagen local -->
+                        <label for="logo-upload-input" title="Logo Oficial SMAL Desarrollo & Comercialización (clic para cargar archivo si lo deseas)"
+                               class="cursor-pointer group relative w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-xl bg-smal-black border-2 border-smal-gold shadow-lg flex items-center justify-center overflow-hidden shrink-0">
+                            <img id="header-logo-img" src="f123f396-5590-4dc3-a5ab-9095b1ce64d1.jpeg" alt="Logo Oficial SMAL Desarrollo & Comercialización" 
+                                 class="w-full h-full object-contain p-0.5 hidden"
+                                 onload="this.classList.remove('hidden'); this.nextElementSibling.classList.add('hidden');"
+                                 onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
+                            
+                            <!-- SVG Vectorial de Alta Nitidez Fiel al Logo Oficial SMAL (Casa con alas, raíces y tipografía SMAL) -->
+                            <svg viewBox="0 0 200 185" class="w-full h-full p-1">
+                                <rect width="200" height="185" fill="#0B0B0B"/>
+                                <!-- Ala Izquierda -->
+                                <path d="M56 76 C36 68, 22 54, 15 36 C25 46, 38 52, 54 55 C36 53, 23 48, 17 44 C26 55, 38 60, 52 63 C36 62, 25 58, 20 55 C28 65, 39 69, 51 71 C38 71, 29 68, 25 66 C33 74, 42 77, 52 78 Z" fill="#F5B81C"/>
+                                <!-- Ala Derecha -->
+                                <path d="M144 76 C164 68, 178 54, 185 36 C175 46, 162 52, 146 55 C164 53, 177 48, 183 44 C174 55, 162 60, 148 63 C164 62, 175 58, 180 55 C172 65, 161 69, 149 71 C162 71, 171 68, 175 66 C167 74, 158 77, 148 78 Z" fill="#F5B81C"/>
+                                <!-- Estructura de la Casa -->
+                                <polygon points="94,22 103,22 103,44 94,51" fill="#F5B81C"/>
+                                <polyline points="48,74 100,32 152,74" fill="none" stroke="#F5B81C" stroke-width="4" stroke-linejoin="round"/>
+                                <polyline points="62,63 62,48 76,48 76,53" fill="none" stroke="#F5B81C" stroke-width="2.5"/>
+                                <rect x="60" y="68" width="80" height="34" fill="none" stroke="#F5B81C" stroke-width="2.5"/>
+                                <!-- Revestimiento horizontal y ventanas -->
+                                <line x1="60" y1="76" x2="95" y2="76" stroke="#F5B81C" stroke-width="1.5"/>
+                                <line x1="60" y1="84" x2="95" y2="84" stroke="#F5B81C" stroke-width="1.5"/>
+                                <line x1="60" y1="92" x2="95" y2="92" stroke="#F5B81C" stroke-width="1.5"/>
+                                <rect x="70" y="74" width="12" height="15" fill="#0B0B0B" stroke="#F5B81C" stroke-width="1.8"/>
+                                <rect x="118" y="72" width="14" height="18" rx="5" fill="#0B0B0B" stroke="#F5B81C" stroke-width="1.8"/>
+                                <!-- Tronco central y Raíces extendidas -->
+                                <rect x="96" y="46" width="7" height="62" fill="#F5B81C"/>
+                                <path d="M99 104 C85 108, 68 106, 52 114 M82 107 C74 114, 66 118, 58 122 M99 104 C114 108, 132 106, 148 114 M118 107 C126 114, 134 118, 142 122 M99 105 C96 116, 92 124, 86 130 M100 105 C104 116, 108 124, 114 130" fill="none" stroke="#F5B81C" stroke-width="2.4" stroke-linecap="round"/>
+                                <!-- Tipografía SMAL condensada -->
+                                <text x="100" y="160" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="700" font-size="31" fill="#F5B81C" letter-spacing="8">SMAL</text>
+                                <text x="100" y="176" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="8.2" fill="#F5B81C" letter-spacing="0.6">• Desarrollo &amp; Comercialización •</text>
+                            </svg>
+                            <input type="file" id="logo-upload-input" accept="image/*" class="hidden" onchange="handleLogoUpload(event)">
+                        </label>
+
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[11px] sm:text-xs font-extrabold uppercase tracking-widest text-smal-gold">
+                                    SMAL Desarrollo &amp; Comercialización
+                                </span>
+                            </div>
+                            <h1 class="font-display font-extrabold text-base sm:text-xl text-white leading-tight mt-0.5">
+                                Desarrollo Inmobiliario “El Calvario”
+                            </h1>
+                            <p class="text-xs sm:text-sm text-stone-300 font-medium">
+                                Ubicación: <strong class="text-white">El Castillo, Xalapa, Veracruz</strong> • Plano Interactivo de Lotificación
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Botón rápido Web Oficial en móvil -->
+                    <a href="https://smal-desarrollos.github.io" target="_blank" rel="noopener noreferrer" 
+                       class="md:hidden inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-smal-gold text-smal-black font-bold text-xs shadow transition">
+                        <span>Sitio Web</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>
+                </div>
+
+                <!-- Contadores Reales: 33 Lotes Totales | 25 Disponibles | 8 Vendidos -->
+                <div class="grid grid-cols-3 gap-2 sm:gap-3 bg-smal-black p-2.5 rounded-xl border border-smal-gold/60">
+                    <div class="text-center px-2 sm:px-4 border-r border-white/15">
+                        <p class="text-[10px] sm:text-xs text-stone-300 uppercase font-semibold tracking-wider">Total Lotes</p>
+                        <p id="stat-total" class="font-display font-extrabold text-base sm:text-xl text-white">33</p>
+                    </div>
+                    <div class="text-center px-2 sm:px-4 border-r border-white/15">
+                        <p class="text-[10px] sm:text-xs text-emerald-300 uppercase font-semibold tracking-wider flex items-center justify-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>Disponibles
+                        </p>
+                        <p id="stat-disponibles" class="font-display font-extrabold text-base sm:text-xl text-emerald-400">25</p>
+                    </div>
+                    <div class="text-center px-2 sm:px-4">
+                        <p class="text-[10px] sm:text-xs text-red-300 uppercase font-semibold tracking-wider flex items-center justify-center gap-1.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-smal-crimson inline-block"></span>Vendidos
+                        </p>
+                        <p id="stat-vendidos" class="font-display font-extrabold text-base sm:text-xl text-red-400">8</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== BARRA DE FILTROS Y SIMBOLOGÍA ==================== -->
+    <section class="bg-white border-b border-smal-sandBorder shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                
+                <!-- Filtros por Estado y por Manzana -->
+                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
+                    <span class="text-xs font-extrabold text-smal-charcoal uppercase tracking-wider shrink-0 mr-1">Filtrar:</span>
+                    
+                    <button onclick="setFilter('all')" id="btn-filter-all" 
+                            class="filter-btn active px-3.5 py-1.5 rounded-full text-xs font-bold transition shrink-0 bg-smal-charcoal text-smal-gold border border-smal-charcoal shadow-sm">
+                        Todos (33)
+                    </button>
+                    <button onclick="setFilter('disponible')" id="btn-filter-disponible" 
+                            class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition shrink-0 bg-smal-sand text-smal-charcoal hover:bg-emerald-50 border border-smal-sandBorder">
+                        🟢 Disponibles (25)
+                    </button>
+                    <button onclick="setFilter('vendido')" id="btn-filter-vendido" 
+                            class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition shrink-0 bg-smal-sand text-smal-charcoal hover:bg-red-50 border border-smal-sandBorder">
+                        🔴 Vendidos (8)
+                    </button>
+                    
+                    <span class="h-4 w-px bg-smal-sandBorder mx-1 shrink-0"></span>
+
+                    <button onclick="setFilter('M1')" id="btn-filter-M1" 
+                            class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition shrink-0 bg-smal-sand text-smal-charcoal hover:bg-stone-200 border border-smal-sandBorder">
+                        Manzana 1 (Vendida)
+                    </button>
+                    <button onclick="setFilter('M2')" id="btn-filter-M2" 
+                            class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition shrink-0 bg-smal-sand text-smal-charcoal hover:bg-stone-200 border border-smal-sandBorder">
+                        Manzana 2 (L-1 a L-14)
+                    </button>
+                    <button onclick="setFilter('M3')" id="btn-filter-M3" 
+                            class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition shrink-0 bg-smal-sand text-smal-charcoal hover:bg-stone-200 border border-smal-sandBorder">
+                        Manzana 3 (L-4 a L-14)
+                    </button>
+                </div>
+
+                <!-- Simbología Topográfica Exacta -->
+                <div class="flex flex-wrap items-center gap-4 text-xs text-smal-charcoal bg-smal-sand px-3.5 py-1.5 rounded-lg border border-smal-sandBorder">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3.5 h-3.5 rounded-full bg-smal-emerald border border-smal-charcoal inline-block"></span>
+                        <span class="font-bold">Disponible</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3.5 h-3.5 rounded-full bg-smal-crimson border border-smal-charcoal inline-block"></span>
+                        <span class="font-bold">Vendido (Punto Rojo)</span>
+                    </div>
+                    <div class="hidden sm:flex items-center gap-1.5 pl-2 border-l border-stone-300 text-smal-forest font-extrabold">
+                        <span>Desde $120,000 MXN • Sin Intereses</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== SECCIÓN PRINCIPAL: PLANO TOPOGRÁFICO + COTIZADOR ==================== -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- COLUMNA IZQUIERDA (8 cols): PLANO TOPOGRÁFICO FIEL AL CROQUIS -->
+            <div class="lg:col-span-7 xl:col-span-8 flex flex-col gap-3">
+                
+                <!-- Banner de ayuda rápida -->
+                <div class="flex items-center justify-between bg-white border border-smal-sandBorder text-smal-charcoal px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow-sm">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-lg">👆</span>
+                        <span><strong>Haz clic o toca cualquier lote</strong> del plano (Manzanas 1, 2 o 3) para ver medidas, disponibilidad y mensualidades.</span>
+                    </div>
+                    <button onclick="resetView()" class="text-xs font-extrabold text-smal-forest hover:text-smal-charcoal underline shrink-0 ml-2">
+                        Restablecer
+                    </button>
+                </div>
+
+                <!-- Marco del Plano Topográfico -->
+                <div class="relative topo-canvas-bg rounded-2xl border-2 border-smal-charcoal shadow-xl overflow-hidden">
+                    
+                    <!-- Barra superior técnica del plano -->
+                    <div class="flex items-center justify-between px-4 py-2.5 bg-smal-charcoal text-white text-[11px] sm:text-xs font-mono tracking-wider border-b-2 border-smal-gold">
+                        <span class="flex items-center gap-2 font-bold">
+                            <span class="w-2.5 h-2.5 rounded-full bg-smal-gold"></span>
+                            CROQUIS DE LOTIFICACIÓN • EL CALVARIO (33 LOTES)
+                        </span>
+                        <span class="text-smal-gold hidden sm:inline font-semibold">EL CASTILLO, XALAPA, VER.</span>
+                    </div>
+
+                    <!-- Contenedor Responsivo del SVG Topográfico -->
+                    <div class="relative w-full overflow-x-auto">
+                        <svg id="topo-svg" viewBox="0 0 960 660" class="w-full h-auto min-w-[680px] sm:min-w-full select-none block" role="img" aria-label="Plano topográfico interactivo del desarrollo El Calvario con Manzana 1, Manzana 2 y Manzana 3">
+                            
+                            <!-- Coordenadas UTM Topográficas perimetrales fieles al plano -->
+                            <g font-family="monospace" font-size="9" fill="#57534E">
+                                <line x1="25" y1="26" x2="935" y2="26" stroke="#A8A29E" stroke-width="0.8"/>
+                                <text x="80" y="20">724,200</text>
+                                <text x="290" y="20">724,225</text>
+                                <text x="500" y="20">724,250</text>
+                                <text x="710" y="20">724,275</text>
+                                <text x="880" y="20">724,300</text>
+                                <text x="900" y="42">2,163,425</text>
+                                <text x="900" y="245">2,163,400</text>
+                                <text x="900" y="445">2,163,375</text>
+                                <text x="900" y="625">2,163,350</text>
+                            </g>
+
+                            <!-- Marca de agua sutil -->
+                            <g opacity="0.045" transform="translate(480, 340) rotate(-22)">
+                                <text x="0" y="0" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="700" font-size="54" fill="#111111" letter-spacing="8">
+                                    SMAL DESARROLLO
+                                </text>
+                            </g>
+
+                            <!-- Rosa de los Vientos (Norte) -->
+                            <g transform="translate(860, 82)">
+                                <circle cx="0" cy="0" r="24" fill="#FFFFFF" stroke="#111111" stroke-width="1.6"/>
+                                <polygon points="0,-19 5,0 0,-4 -5,0" fill="#111111"/>
+                                <polygon points="0,19 5,0 0,4 -5,0" fill="#FFFFFF" stroke="#111111" stroke-width="1.2"/>
+                                <text x="0" y="-28" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="11" fill="#111111">N</text>
+                            </g>
+
+                            <!-- Leyendas de Colindancias Topográficas del Croquis -->
+                            <text x="435" y="132" transform="rotate(33, 435, 132)" font-family="Inter, sans-serif" font-weight="700" font-size="10" fill="#44403C" letter-spacing="1.5">
+                                PROPIEDAD PRIVADA
+                            </text>
+                            <text x="685" y="265" transform="rotate(33, 685, 265)" font-family="Inter, sans-serif" font-weight="700" font-size="10" fill="#44403C" letter-spacing="1.5">
+                                PARCELA NÚMERO 171
+                            </text>
+                            <text x="275" y="455" transform="rotate(31, 275, 455)" font-family="Inter, sans-serif" font-weight="700" font-size="10" fill="#44403C" letter-spacing="1.5">
+                                MISMA PROPIEDAD / PARCELA 420
+                            </text>
+                            <text x="912" y="555" transform="rotate(-90, 912, 555)" font-family="Inter, sans-serif" font-weight="700" font-size="10" fill="#44403C" letter-spacing="1">
+                                PEPE AGUILAR
+                            </text>
+
+                            <!-- ==================== VIALIDADES DEL CROQUIS TOPOGRÁFICO ==================== -->
+                            <!-- Acceso Lateral Izquierdo (Entre Manzana 1 y Manzana 3) -->
+                            <polygon points="212,265 344,124 374,144 242,285" fill="#F6F4EF" stroke="#111111" stroke-width="1.5"/>
+                            <text x="292" y="212" text-anchor="middle" transform="rotate(-47, 292, 212)" font-family="Inter, sans-serif" font-weight="800" font-size="8.5" fill="#111111" letter-spacing="1">
+                                CALLE PRIVADA DE 6.00 M
+                            </text>
+
+                            <!-- Vialidad Principal Central (Divide Manzana 1 y 3 de Manzana 2) -->
+                            <polygon points="88,242 885,542 868,576 70,276" fill="#F6F4EF" stroke="#111111" stroke-width="1.5"/>
+                            <line x1="82" y1="259" x2="876" y2="559" stroke="#78716C" stroke-width="1" stroke-dasharray="8,6"/>
+                            <text x="485" y="405" text-anchor="middle" transform="rotate(20.6, 485, 405)" font-family="Inter, sans-serif" font-weight="800" font-size="10" fill="#111111" letter-spacing="2.5">
+                                CALLE PRIVADA DE 6.00 M (ACCESO PRINCIPAL)
+                            </text>
+
+                            <!-- ==================== ETIQUETAS DESCRIPTIVAS DE MANZANAS ==================== -->
+                            <!-- Etiqueta Manzana 1 Vendida -->
+                            <g transform="translate(152, 118) rotate(-47)">
+                                <rect x="-92" y="-13" width="184" height="22" rx="6" fill="#111111" stroke="#DC2626" stroke-width="1.5"/>
+                                <text x="0" y="2" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="10" fill="#FFFFFF">
+                                    Manzana 1 • Vendida (5/5)
+                                </text>
+                            </g>
+
+                            <!-- Etiqueta Manzana 3 Disponibles del L-4 al L-14 -->
+                            <g transform="translate(652, 298) rotate(32)">
+                                <rect x="-132" y="-13" width="264" height="22" rx="6" fill="#1E4D3B" stroke="#F5B81C" stroke-width="1.4"/>
+                                <text x="0" y="2" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="10" fill="#FFFFFF">
+                                    Manzana 3 • Disponibles del L-4 al L-14
+                                </text>
+                            </g>
+
+                            <!-- Etiqueta Manzana 2 Disponible -->
+                            <g transform="translate(415, 518) rotate(20.6)">
+                                <rect x="-112" y="-13" width="224" height="22" rx="6" fill="#15803D" stroke="#111111" stroke-width="1.3"/>
+                                <text x="0" y="2" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="10" fill="#FFFFFF">
+                                    Manzana 2 • Disponible (L-1 al L-14)
+                                </text>
+                            </g>
+
+                            <!-- ==================== CAPA DINÁMICA DE LOS 33 LOTES ==================== -->
+                            <g id="lots-layer"></g>
+
+                            <!-- ==================== PUNTERO GUÍA ANIMADO 👆 ==================== -->
+                            <g id="animated-pointer" class="pointer-guide" transform="translate(172, 345)">
+                                <circle cx="0" cy="-10" r="17" fill="#F5B81C" fill-opacity="0.32" stroke="#111111" stroke-width="1.5"/>
+                                <text x="0" y="6" text-anchor="middle" font-size="28">👆</text>
+                                <g transform="translate(0, 26)">
+                                    <rect x="-46" y="-10" width="92" height="20" rx="10" fill="#111111" stroke="#F5B81C" stroke-width="1.3"/>
+                                    <text x="0" y="3" text-anchor="middle" font-family="Inter, sans-serif" font-weight="800" font-size="9.5" fill="#F5B81C">¡Toca un lote!</text>
+                                </g>
+                            </g>
+
+                            <!-- Nota técnica inferior del croquis -->
+                            <text x="28" y="644" font-family="Inter, sans-serif" font-weight="700" font-size="9.5" fill="#44403C">
+                                SIMBOLOGÍA: 🔴 Punto Rojo = Lote Vendido (8) | 🟢 Punto Verde = Lote Disponible (25). Trazos en líneas negras sobre blanco.
+                            </text>
+                            <text x="935" y="644" text-anchor="end" font-family="Inter, sans-serif" font-weight="800" font-size="9.5" fill="#111111">
+                                SMAL DESARROLLO &amp; COMERCIALIZACIÓN
+                            </text>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA (4 cols): PANEL DE DETALLE Y COTIZADOR EN MXN -->
+            <div class="lg:col-span-5 xl:col-span-4" id="cotizador-panel">
+                <div class="bg-white rounded-2xl border-2 border-smal-charcoal shadow-xl overflow-hidden sticky top-24">
+                    
+                    <!-- Cabecera del Lote Seleccionado -->
+                    <div id="detail-header" class="bg-smal-charcoal text-white p-5 border-b-2 border-smal-gold">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <span id="detail-manzana" class="inline-block px-2.5 py-0.5 rounded-md bg-smal-black text-smal-gold border border-smal-gold/50 text-xs font-extrabold uppercase tracking-wider mb-1">
+                                    Manzana 2
+                                </span>
+                                <h2 id="detail-title" class="font-display font-extrabold text-2xl sm:text-3xl text-white">
+                                    Lote L-1
+                                </h2>
+                            </div>
+                            <span id="detail-status-badge" class="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wide bg-emerald-600 text-white border border-emerald-300 shadow-sm">
+                                🟢 Disponible
+                            </span>
+                        </div>
+                        <p id="detail-subtitle" class="text-xs text-stone-300 mt-1.5">
+                            Frente a Calle Privada de 6.00 m • El Castillo, Xalapa, Veracruz.
+                        </p>
+                    </div>
+
+                    <!-- Cuerpo de Ficha Técnica y Cotizador -->
+                    <div class="p-5 space-y-5">
+                        
+                        <!-- Datos Técnicos -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-smal-sand p-3 rounded-xl border border-smal-sandBorder">
+                                <span class="text-[11px] font-extrabold text-stone-600 uppercase block">Superficie Aprox.</span>
+                                <span id="detail-area" class="font-display font-extrabold text-base sm:text-lg text-smal-charcoal">110.12 m²</span>
+                                <span id="detail-type" class="text-[11px] text-smal-forest font-bold block">Lote Cabecera / Esquina</span>
+                            </div>
+                            <div class="bg-smal-sand p-3 rounded-xl border border-smal-sandBorder">
+                                <span class="text-[11px] font-extrabold text-stone-600 uppercase block">Estatus Legal</span>
+                                <span class="font-display font-extrabold text-sm sm:text-base text-smal-charcoal leading-snug block mt-0.5">Certificado</span>
+                                <span class="text-[11px] text-stone-700 font-semibold block">Posesión inmediata</span>
+                            </div>
+                        </div>
+
+                        <!-- Precio de Lista -->
+                        <div class="bg-amber-50/80 p-4 rounded-xl border border-smal-gold flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-extrabold text-smal-charcoal uppercase tracking-wider block">Precio de Lista</span>
+                                <span class="text-[11px] text-stone-700 font-semibold">Facilidades directas sin intereses</span>
+                            </div>
+                            <div class="text-right">
+                                <span id="detail-price" class="font-display font-extrabold text-xl sm:text-2xl text-smal-charcoal">$126,000</span>
+                                <span class="text-xs font-extrabold text-smal-forest block">MXN</span>
+                            </div>
+                        </div>
+
+                        <!-- Cotizador Activo (Si el lote está Disponible) -->
+                        <div id="calculator-section" class="space-y-4">
+                            
+                            <!-- 1. Selector de Enganche -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="text-xs font-extrabold text-smal-charcoal uppercase tracking-wider">1. Selecciona tu Enganche (MXN):</label>
+                                    <span class="text-[11px] font-bold text-smal-forest bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Aparta hoy</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" onclick="selectDownPayment(10000)" id="dp-10000" 
+                                            class="dp-btn py-2.5 px-2 rounded-xl border-2 border-smal-charcoal bg-smal-charcoal text-smal-gold font-display font-extrabold text-xs sm:text-sm transition shadow-sm">
+                                        $10,000
+                                    </button>
+                                    <button type="button" onclick="selectDownPayment(15000)" id="dp-15000" 
+                                            class="dp-btn py-2.5 px-2 rounded-xl border-2 border-smal-sandBorder bg-white text-smal-charcoal hover:border-smal-charcoal font-display font-extrabold text-xs sm:text-sm transition">
+                                        $15,000
+                                    </button>
+                                    <button type="button" onclick="selectDownPayment(20000)" id="dp-20000" 
+                                            class="dp-btn py-2.5 px-2 rounded-xl border-2 border-smal-sandBorder bg-white text-smal-charcoal hover:border-smal-charcoal font-display font-extrabold text-xs sm:text-sm transition">
+                                        $20,000
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 2. Selector de Plazo sin Intereses -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="text-xs font-extrabold text-smal-charcoal uppercase tracking-wider">2. Plazo Sin Intereses:</label>
+                                    <span class="text-[11px] font-extrabold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">0% Interés</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button type="button" onclick="selectMonths(12)" id="m-12" 
+                                            class="m-btn py-2 px-2 rounded-xl border-2 border-smal-sandBorder bg-white text-smal-charcoal hover:border-smal-charcoal font-bold text-xs sm:text-sm transition">
+                                        12 Meses
+                                    </button>
+                                    <button type="button" onclick="selectMonths(24)" id="m-24" 
+                                            class="m-btn py-2 px-2 rounded-xl border-2 border-smal-sandBorder bg-white text-smal-charcoal hover:border-smal-charcoal font-bold text-xs sm:text-sm transition">
+                                        24 Meses
+                                    </button>
+                                    <button type="button" onclick="selectMonths(36)" id="m-36" 
+                                            class="m-btn py-2 px-2 rounded-xl border-2 border-smal-charcoal bg-smal-charcoal text-smal-gold font-bold text-xs sm:text-sm transition shadow-sm">
+                                        36 Meses
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Resultado Financiero -->
+                            <div class="bg-smal-charcoal text-white p-4 rounded-xl border border-smal-gold/60 shadow-inner">
+                                <div class="flex justify-between items-center text-xs text-stone-300 mb-1.5">
+                                    <span>Saldo restante a financiar:</span>
+                                    <span id="calc-saldo" class="font-bold text-white">$116,000 MXN</span>
+                                </div>
+                                <div class="flex items-baseline justify-between pt-2 border-t border-white/15">
+                                    <div>
+                                        <span class="text-xs font-extrabold text-smal-gold uppercase block">Mensualidad Fija</span>
+                                        <span id="calc-plazo-label" class="text-[11px] text-stone-300">36 pagos sin intereses</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <span id="calc-mensualidad" class="font-display font-extrabold text-2xl text-white">$3,222.22</span>
+                                        <span class="text-xs text-smal-gold font-extrabold ml-1">MXN</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botón WhatsApp Directo -->
+                            <a id="whatsapp-cta" href="#" target="_blank" rel="noopener noreferrer"
+                               class="w-full flex items-center justify-center gap-2.5 bg-[#25D366] hover:bg-[#1ebe5d] active:scale-[0.99] text-smal-black font-display font-extrabold text-sm sm:text-base py-3.5 px-4 rounded-xl shadow-lg transition">
+                                <svg class="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24">
+                                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824zm-3.423-14.416c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm.029 18.88c-1.161 0-2.305-.292-3.318-.844l-3.677.964.984-3.595c-.607-1.052-.927-2.246-.926-3.468.001-3.825 3.113-6.937 6.937-6.937 1.856.001 3.598.723 4.907 2.034 1.31 1.311 2.031 3.054 2.03 4.908-.001 3.825-3.113 6.938-6.937 6.938z"/>
+                                </svg>
+                                <span>Apartar o Cotizar por WhatsApp</span>
+                            </a>
+                        </div>
+
+                        <!-- Aviso cuando se selecciona un Lote Vendido (Punto Rojo) -->
+                        <div id="sold-notice" class="hidden bg-red-50 border-2 border-red-200 rounded-xl p-4 text-center space-y-3">
+                            <div class="w-11 h-11 rounded-full bg-smal-crimson text-white flex items-center justify-center mx-auto font-extrabold text-lg shadow">
+                                ●
+                            </div>
+                            <div>
+                                <h3 class="font-display font-extrabold text-red-950 text-base">Lote Vendido (Marcado en Rojo)</h3>
+                                <p class="text-xs text-red-900 mt-1 leading-relaxed">
+                                    Este terreno ya cuenta con propietario. Te invitamos a elegir cualquiera de los <strong>25 lotes disponibles</strong> en <strong>Manzana 2 (L-1 al L-14)</strong> o <strong>Manzana 3 (L-4 al L-14)</strong>.
+                                </p>
+                            </div>
+                            <button type="button" onclick="selectNextAvailable()" 
+                                    class="w-full py-2.5 px-4 rounded-xl bg-smal-charcoal hover:bg-smal-black text-smal-gold text-xs font-extrabold uppercase tracking-wider transition shadow">
+                                Ver siguiente lote disponible
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== GALERÍA FOTOGRÁFICA DEL DESARROLLO (5 VISTAS) ==================== -->
+        <section id="gallery-dropzone" class="bg-white rounded-2xl border-2 border-smal-charcoal shadow-xl p-5 sm:p-7 transition">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-5 border-b border-smal-sandBorder">
+                <div>
+                    <span class="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-smal-forest">
+                        <span class="w-2.5 h-2.5 rounded-full bg-smal-gold border border-smal-charcoal"></span>
+                        Ubicación Real y Entorno Natural • El Castillo, Xalapa
+                    </span>
+                    <h2 class="font-display font-extrabold text-xl sm:text-2xl text-smal-charcoal mt-0.5">
+                        Galería del Desarrollo y Vialidades (5 Vistas)
+                    </h2>
+                    <p class="text-xs sm:text-sm text-stone-600 mt-1">
+                        Explora las vistas panorámicas desde el terreno hacia Xalapa, la topografía limpia y los accesos con transporte público. Haz clic en cualquier foto para ampliarla.
+                    </p>
+                </div>
+
+                <!-- Botón para cargar las 5 fotos reales desde el dispositivo (o arrastrarlas aquí) -->
+                <div class="shrink-0 flex flex-col sm:items-end gap-1">
+                    <label for="local-photos-input" 
+                           class="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-smal-charcoal hover:bg-smal-black text-smal-gold border border-smal-gold text-xs font-extrabold transition shadow-md">
+                        <span>📷 Cargar mis 5 fotos reales</span>
+                    </label>
+                    <span class="text-[10px] text-stone-500 font-medium">O arrastra tus archivos JPG aquí</span>
+                    <input type="file" id="local-photos-input" accept="image/*" multiple class="hidden" onchange="handleLocalPhotosUpload(event)">
+                </div>
+            </div>
+
+            <!-- Grid de 5 Tarjetas Fotográficas -->
+            <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6"></div>
+        </section>
+
+    </main>
+
+    <!-- ==================== LIGHTBOX MODAL PARA AMPLIAR FOTOGRAFÍAS ==================== -->
+    <div id="photo-lightbox" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeLightbox(event)">
+        <div class="relative max-w-4xl w-full bg-white rounded-2xl overflow-hidden border-2 border-smal-gold shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between px-4 py-3 bg-smal-charcoal text-white border-b border-smal-gold/40">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-smal-gold"></span>
+                    <h3 id="lightbox-title" class="font-display font-bold text-sm sm:text-base text-white">Vista del Proyecto</h3>
+                </div>
+                <button type="button" onclick="closeLightbox()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-bold transition">
+                    ✕
+                </button>
+            </div>
+            <div class="bg-smal-black flex items-center justify-center max-h-[70vh] overflow-hidden">
+                <div id="lightbox-visual" class="w-full flex items-center justify-center"></div>
+            </div>
+            <div class="p-4 bg-smal-sand flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <p id="lightbox-desc" class="text-xs sm:text-sm text-smal-charcoal font-semibold"></p>
+                <span class="text-[11px] font-extrabold text-smal-forest uppercase tracking-wider shrink-0">
+                    El Calvario • SMAL Desarrollo
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PIE DE PÁGINA EXCLUSIVO SMAL ==================== -->
+    <footer class="bg-smal-charcoal text-stone-200 border-t-2 border-smal-gold mt-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                
+                <!-- Identidad Corporativa con Logo Oficial SMAL -->
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-14 h-14 rounded-xl bg-smal-black border-2 border-smal-gold flex items-center justify-center overflow-hidden shrink-0">
+                            <img id="footer-logo-img" src="f123f396-5590-4dc3-a5ab-9095b1ce64d1.jpeg" alt="Logo SMAL" 
+                                 class="w-full h-full object-contain p-0.5 hidden"
+                                 onload="this.classList.remove('hidden'); this.nextElementSibling.classList.add('hidden');"
+                                 onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
+                            <svg viewBox="0 0 200 185" class="w-full h-full p-1">
+                                <rect width="200" height="185" fill="#0B0B0B"/>
+                                <path d="M56 76 C36 68, 22 54, 15 36 C25 46, 38 52, 54 55 C36 53, 23 48, 17 44 C26 55, 38 60, 52 63 C36 62, 25 58, 20 55 C28 65, 39 69, 51 71 Z" fill="#F5B81C"/>
+                                <path d="M144 76 C164 68, 178 54, 185 36 C175 46, 162 52, 146 55 C164 53, 177 48, 183 44 C174 55, 162 60, 148 63 C164 62, 175 58, 180 55 C172 65, 161 69, 149 71 Z" fill="#F5B81C"/>
+                                <polyline points="48,74 100,32 152,74" fill="none" stroke="#F5B81C" stroke-width="5"/>
+                                <rect x="60" y="68" width="80" height="34" fill="none" stroke="#F5B81C" stroke-width="3"/>
+                                <rect x="96" y="46" width="7" height="62" fill="#F5B81C"/>
+                                <path d="M99 104 C85 108, 68 106, 52 114 M99 104 C114 108, 132 106, 148 114 M99 105 C96 116, 92 124, 86 130 M100 105 C104 116, 108 124, 114 130" fill="none" stroke="#F5B81C" stroke-width="3"/>
+                                <text x="100" y="162" text-anchor="middle" font-family="Oswald, sans-serif" font-weight="700" font-size="32" fill="#F5B81C" letter-spacing="8">SMAL</text>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="font-display font-extrabold text-base text-white block">
+                                SMAL Desarrollo &amp; Comercialización
+                            </span>
+                            <span class="text-xs text-smal-gold font-semibold">
+                                Proyecto El Calvario • El Castillo, Xalapa
+                            </span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-stone-300 leading-relaxed">
+                        Comercialización directa de terrenos habitacionales en Xalapa, Veracruz. Trato directo, planes sin intereses y certeza documental.
+                    </p>
+                </div>
+
+                <!-- Contacto Directo -->
+                <div class="space-y-2.5 text-xs sm:text-sm">
+                    <h3 class="font-display font-extrabold text-smal-gold uppercase tracking-wider text-xs">Atención Personalizada</h3>
+                    <div class="flex flex-col space-y-2">
+                        <a href="https://wa.me/522281129348?text=Hola%20SMAL%20Desarrollo%20%26%20Comercializaci%C3%B3n,%20me%20interesa%20informaci%C3%B3n%20sobre%20los%20lotes%20disponibles%20en%20El%20Calvario." 
+                           target="_blank" rel="noopener noreferrer"
+                           class="inline-flex items-center gap-2 text-white hover:text-smal-gold transition">
+                            <span class="w-7 h-7 rounded-lg bg-smal-black border border-smal-gold/50 flex items-center justify-center text-emerald-400">📱</span>
+                            <span>WhatsApp Directo: <strong>+52 228 112 9348</strong></span>
+                        </a>
+                        <a href="mailto:smal.desarrollo@gmail.com" 
+                           class="inline-flex items-center gap-2 text-white hover:text-smal-gold transition">
+                            <span class="w-7 h-7 rounded-lg bg-smal-black border border-smal-gold/50 flex items-center justify-center text-smal-gold">✉️</span>
+                            <span>Correo: <strong>smal.desarrollo@gmail.com</strong></span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Enlace al Sitio Oficial -->
+                <div class="space-y-3 md:text-right">
+                    <a href="https://smal-desarrollos.github.io" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-smal-gold hover:bg-smal-goldLight text-smal-black font-display font-extrabold text-xs sm:text-sm shadow-lg transition">
+                        <span>Visitar Sitio Web Oficial</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </a>
+                    <p class="text-xs text-stone-400 font-mono block">
+                        https://smal-desarrollos.github.io
+                    </p>
+                </div>
+
+            </div>
+
+            <!-- Derechos Reservados y Protección de Marca -->
+            <div class="mt-6 pt-5 border-t border-white/15 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-stone-400 text-center sm:text-left">
+                <p>
+                    &copy; 2026 <strong class="text-white">SMAL Desarrollo &amp; Comercialización</strong>. Todos los derechos reservados.
+                </p>
+                <p>
+                    Material comercial y plano de lotificación protegidos por propiedad intelectual. Prohibida su reproducción o uso sin autorización escrita de SMAL.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==================== LÓGICA DEL PLANO TOPOGRÁFICO, COTIZADOR Y GALERÍA ==================== -->
+    <script>
+        /**
+         * 1. BASE DE DATOS DE LOS 33 LOTES EXACTOS SEGÚN EL CROQUIS TOPOGRÁFICO Y TUS INSTRUCCIONES:
+         * - Manzana 1: L-1 al L-5 (5 lotes) -> TODOS VENDIDOS (punto rojo)
+         * - Manzana 2: L-1 al L-14 (14 lotes) -> TODOS DISPONIBLES
+         * - Manzana 3: L-1, L-2, L-3 VENDIDOS (punto rojo) | L-4 al L-14 (11 lotes) DISPONIBLES
+         */
+        const LOTS_DATA = [];
+
+        function buildLotsDataset() {
+            // --- MANZANA 1 (5 Lotes: L-1 a L-5, todos VENDIDOS con punto rojo) ---
+            const m1StartX = 95, m1StartY = 215;
+            const m1StepX = 43, m1StepY = -46;
+            const m1DepthX = 52, m1DepthY = 36;
+
+            for (let i = 1; i <= 5; i++) {
+                const idx = i - 1;
+                const x1 = m1StartX + idx * m1StepX;
+                const y1 = m1StartY + idx * m1StepY;
+                const x2 = x1 + m1StepX;
+                const y2 = y1 + m1StepY;
+                const x3 = x2 + m1DepthX;
+                const y3 = y2 + m1DepthY;
+                const x4 = x1 + m1DepthX;
+                const y4 = y1 + m1DepthY;
+
+                const isCorner = (i === 1 || i === 5);
+                LOTS_DATA.push({
+                    id: `M1-L${i}`,
+                    manzana: 'M1',
+                    manzanaLabel: 'Manzana 1',
+                    num: `L-${i}`,
+                    status: 'vendido', // Los 5 vendidos
+                    area: isCorner ? 110.12 : 105.00,
+                    price: isCorner ? 126000 : 120000,
+                    isCorner,
+                    points: `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}`,
+                    cx: (x1 + x2 + x3 + x4) / 4,
+                    cy: (y1 + y2 + y3 + y4) / 4,
+                    angle: -47
+                });
+            }
+
+            // --- MANZANA 2 (14 Lotes: L-1 a L-14, todos DISPONIBLES) ---
+            const m2StartX = 82, m2StartY = 285;
+            const m2StepX = 55.5, m2StepY = 21.0;
+            const m2DepthX = -26, m2DepthY = 66;
+
+            for (let i = 1; i <= 14; i++) {
+                const idx = i - 1;
+                const x1 = m2StartX + idx * m2StepX;
+                const y1 = m2StartY + idx * m2StepY;
+                const x2 = x1 + m2StepX;
+                const y2 = y1 + m2StepY;
+                const x3 = x2 + m2DepthX;
+                const y3 = y2 + m2DepthY;
+                const x4 = x1 + m2DepthX;
+                const y4 = y1 + m2DepthY;
+
+                const isCorner = (i === 1 || i === 14);
+                LOTS_DATA.push({
+                    id: `M2-L${i}`,
+                    manzana: 'M2',
+                    manzanaLabel: 'Manzana 2',
+                    num: `L-${i}`,
+                    status: 'disponible', // Del L-1 al L-14 disponibles
+                    area: isCorner ? 110.12 : 105.00,
+                    price: isCorner ? 126000 : 120000,
+                    isCorner,
+                    points: `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4}`,
+                    cx: (x1 + x2 + x3 + x4) / 4,
+                    cy: (y1 + y2 + y3 + y4) / 4,
+                    angle: -69
+                });
+            }
+
+            // --- MANZANA 3 (L-1, L-2, L-3 VENDIDOS con punto rojo; del L-4 al L-14 DISPONIBLES) ---
+            const m3LotsCustom = [
+                { num: 'L-1', status: 'vendido', isCorner: true, pts: [[245,288],[306,226],[348,255],[296,308]], angle: -45 },
+                { num: 'L-2', status: 'vendido', isCorner: false, pts: [[306,226],[365,166],[408,196],[348,255]], angle: -45 },
+                { num: 'L-3', status: 'vendido', isCorner: true, pts: [[365,166],[416,198],[395,248],[348,255]], angle: -30 }
+            ];
+
+            m3LotsCustom.forEach((item, idx) => {
+                const ptsStr = item.pts.map(p => p.join(',')).join(' ');
+                const cx = item.pts.reduce((acc, p) => acc + p[0], 0) / 4;
+                const cy = item.pts.reduce((acc, p) => acc + p[1], 0) / 4;
+                LOTS_DATA.push({
+                    id: `M3-L${idx + 1}`,
+                    manzana: 'M3',
+                    manzanaLabel: 'Manzana 3',
+                    num: item.num,
+                    status: item.status, // Vendidos L-1, L-2, L-3
+                    area: item.isCorner ? 110.12 : 105.00,
+                    price: item.isCorner ? 126000 : 120000,
+                    isCorner: item.isCorner,
+                    points: ptsStr,
+                    cx,
+                    cy,
+                    angle: item.angle
+                });
+            });
+
+            // L-4 al L-14 de Manzana 3 (11 lotes Disponibles)
+            const m3BaseStartX = 296, m3BaseStartY = 308;
+            const m3StepX = 53.5, m3StepY = 20.3;
+
+            for (let i = 4; i <= 14; i++) {
+                const k = i - 4;
+                const bx1 = m3BaseStartX + k * m3StepX;
+                const by1 = m3BaseStartY + k * m3StepY;
+                const bx2 = bx1 + m3StepX;
+                const by2 = by1 + m3StepY;
+
+                const depth1 = 96 - k * 5.2;
+                const depth2 = 96 - (k + 1) * 5.2;
+
+                const ux = 0.36, uy = -0.93;
+                const tx1 = bx1 + ux * depth1;
+                const ty1 = by1 + uy * depth1;
+                const tx2 = bx2 + ux * depth2;
+                const ty2 = by2 + uy * depth2;
+
+                const isCorner = (i === 14);
+                LOTS_DATA.push({
+                    id: `M3-L${i}`,
+                    manzana: 'M3',
+                    manzanaLabel: 'Manzana 3',
+                    num: `L-${i}`,
+                    status: 'disponible', // Del L-4 al L-14 disponibles
+                    area: isCorner ? 110.12 : 105.00,
+                    price: isCorner ? 126000 : 120000,
+                    isCorner,
+                    points: `${bx1.toFixed(1)},${by1.toFixed(1)} ${bx2.toFixed(1)},${by2.toFixed(1)} ${tx2.toFixed(1)},${ty2.toFixed(1)} ${tx1.toFixed(1)},${ty1.toFixed(1)}`,
+                    cx: (bx1 + bx2 + tx1 + tx2) / 4,
+                    cy: (by1 + by2 + ty1 + ty2) / 4,
+                    angle: -69
+                });
+            }
+        }
+
+        buildLotsDataset();
+
+        /**
+         * 2. GALERÍA DE 5 VISTAS REALES DEL PROYECTO EL CALVARIO Y ENTORNO EN EL CASTILLO
+         */
+        const GALLERY_ITEMS = [
+            {
+                file: 'IMG_20261012_175039.jpg',
+                title: '1. Vista Panorámica al Atardecer',
+                desc: 'Vista abierta desde la parte alta del terreno hacia la ciudad de Xalapa y montañas al atardecer.',
+                sceneType: 'sunset'
+            },
+            {
+                file: 'IMG_20261012_175110.jpg',
+                title: '2. Terreno Limpio y Nivelado',
+                desc: 'Superficie desmontada y nivelada con vista panorámica al valle y abundante vegetación arbolada.',
+                sceneType: 'meadow'
+            },
+            {
+                file: 'IMG-20261011-WA0022.jpg',
+                title: '3. Pendiente Suave y Arbolado',
+                desc: 'Terreno firme con pendiente suave, cielo despejado y arbolado perimetral en El Castillo.',
+                sceneType: 'slope'
+            },
+            {
+                file: 'IMG-20261011-WA0028.jpg',
+                title: '4. Acceso Vial y Zona Comercial',
+                desc: 'Calle principal pavimentada de acceso en El Castillo con comercios cercanos (Comex / Farmacia).',
+                sceneType: 'street'
+            },
+            {
+                file: 'IMG-20261011-WA0033.jpg',
+                title: '5. Transporte Público Directo',
+                desc: 'Excelente conectividad con rutas de transporte público urbano pasando a pocos minutos del desarrollo.',
+                sceneType: 'bus'
+            }
+        ];
+
+        let selectedLotId = 'M2-L1';
+        let selectedDownPayment = 10000;
+        let selectedMonths = 36;
+        let currentFilter = 'all';
+        let userInteractedWithMap = false;
+
+        function renderTopoMap() {
+            const layer = document.getElementById('lots-layer');
+            layer.innerHTML = '';
+
+            LOTS_DATA.forEach(lot => {
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', `lot-group ${lot.id === selectedLotId ? 'selected' : ''}`);
+                g.setAttribute('data-id', lot.id);
+                g.setAttribute('data-status', lot.status);
+                g.setAttribute('data-manzana', lot.manzana);
+                g.addEventListener('click', () => selectLot(lot.id));
+
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                poly.setAttribute('points', lot.points);
+                poly.setAttribute('fill', lot.id === selectedLotId ? '#FEF3C7' : '#FFFFFF');
+                poly.setAttribute('class', 'lot-shape');
+                g.appendChild(poly);
+
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', lot.cx);
+                label.setAttribute('y', lot.cy - 4);
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('dominant-baseline', 'middle');
+                label.setAttribute('transform', `rotate(${lot.angle}, ${lot.cx}, ${lot.cy})`);
+                label.setAttribute('font-family', 'Inter, sans-serif');
+                label.setAttribute('font-weight', '800');
+                label.setAttribute('font-size', '10.5');
+                label.setAttribute('fill', '#111111');
+                label.textContent = lot.num;
+                g.appendChild(label);
+
+                // Punto rojo para vendidos, verde para disponibles
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('cx', lot.cx);
+                dot.setAttribute('cy', lot.cy + 11);
+                dot.setAttribute('r', lot.status === 'vendido' ? '5.5' : '4.2');
+                dot.setAttribute('fill', lot.status === 'vendido' ? '#DC2626' : '#15803D');
+                dot.setAttribute('stroke', '#111111');
+                dot.setAttribute('stroke-width', '1');
+                g.appendChild(dot);
+
+                layer.appendChild(g);
+            });
+
+            applyFilterVisuals();
+        }
+
+        function selectLot(lotId) {
+            selectedLotId = lotId;
+            userInteractedWithMap = true;
+
+            const pointer = document.getElementById('animated-pointer');
+            if (pointer) pointer.style.opacity = '0';
+
+            renderTopoMap();
+            updateDetailPanel();
+
+            if (window.innerWidth < 1024) {
+                document.getElementById('cotizador-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        function updateStats() {
+            const total = LOTS_DATA.length;
+            const disp = LOTS_DATA.filter(l => l.status === 'disponible').length;
+            const vend = LOTS_DATA.filter(l => l.status === 'vendido').length;
+
+            const elTotal = document.getElementById('stat-total');
+            const elDisp = document.getElementById('stat-disponibles');
+            const elVend = document.getElementById('stat-vendidos');
+
+            if (elTotal) elTotal.textContent = total;
+            if (elDisp) elDisp.textContent = disp;
+            if (elVend) elVend.textContent = vend;
+        }
+        window.updateStats = updateStats;
+
+        function updateDetailPanel() {
+            const lot = LOTS_DATA.find(l => l.id === selectedLotId);
+            if (!lot) return;
+
+            document.getElementById('detail-manzana').textContent = lot.manzanaLabel;
+            document.getElementById('detail-title').textContent = `Lote ${lot.num}`;
+            document.getElementById('detail-area').textContent = `${lot.area.toFixed(2)} m²`;
+            document.getElementById('detail-type').textContent = lot.isCorner ? 'Lote Cabecera / Esquina' : 'Lote Regular (7m × 15m)';
+            document.getElementById('detail-price').textContent = formatMXN(lot.price);
+
+            const badge = document.getElementById('detail-status-badge');
+            const calcSection = document.getElementById('calculator-section');
+            const soldNotice = document.getElementById('sold-notice');
+
+            if (lot.status === 'disponible') {
+                badge.textContent = '🟢 Disponible';
+                badge.className = 'px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wide bg-emerald-600 text-white border border-emerald-300 shadow-sm';
+                calcSection.classList.remove('hidden');
+                soldNotice.classList.add('hidden');
+                recalculateFinancing();
+            } else {
+                badge.textContent = '🔴 Vendido';
+                badge.className = 'px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wide bg-smal-crimson text-white border border-red-300 shadow-sm';
+                calcSection.classList.add('hidden');
+                soldNotice.classList.remove('hidden');
+            }
+        }
+
+        function selectDownPayment(amount) {
+            selectedDownPayment = amount;
+            [10000, 15000, 20000].forEach(val => {
+                const btn = document.getElementById(`dp-${val}`);
+                if (val === amount) {
+                    btn.className = 'dp-btn py-2.5 px-2 rounded-xl border-2 border-smal-charcoal bg-smal-charcoal text-smal-gold font-display font-extrabold text-xs sm:text-sm transition shadow-sm';
+                } else {
+                    btn.className = 'dp-btn py-2.5 px-2 rounded-xl border-2 border-smal-sandBorder bg-white text-smal-charcoal hover:border-smal-charcoal font-display font-extrabold text-xs sm:text-sm transition';
+                }
+            });
+            recalculateFinancing();
+        }
+
+        function selectMonths(months) {
+            selectedMonths = months;
+            [12, 24, 36].forEach(val => {
+                const btn = document.getElementById(`m-${val}`);
+                if (val === months) {
+                    btn.className = 'm-btn py-2 px-2 rounded-xl border-2 border-smal-charcoal bg-smal-charcoal text-smal-gold font-bold text-xs sm:text-sm transition shadow-sm';
+                } else {
+                    btn.className = 'm-btn py-2 px-2 rounded-xl border-2 border-smal-sandBorder bg-white text-smal-charcoal hover:border-smal-charcoal font-bold text-xs sm:text-sm transition';
+                }
+            });
+            recalculateFinancing();
+        }
+
+        function recalculateFinancing() {
+            const lot = LOTS_DATA.find(l => l.id === selectedLotId);
+            if (!lot) return;
+
+            const saldo = Math.max(0, lot.price - selectedDownPayment);
+            const mensualidad = saldo / selectedMonths;
+
+            document.getElementById('calc-saldo').textContent = `${formatMXN(saldo)} MXN`;
+            document.getElementById('calc-plazo-label').textContent = `${selectedMonths} pagos fijos sin intereses`;
+            document.getElementById('calc-mensualidad').textContent = formatMXNDecimal(mensualidad);
+
+            const msg = `Hola SMAL Desarrollo & Comercialización, me interesa cotizar/apartar en el Proyecto El Calvario (El Castillo, Xalapa):\n` +
+                        `• Ubicación: ${lot.manzanaLabel} - Lote ${lot.num} (${lot.area.toFixed(2)} m²)\n` +
+                        `• Precio de lista: ${formatMXN(lot.price)} MXN\n` +
+                        `• Enganche elegido: ${formatMXN(selectedDownPayment)} MXN\n` +
+                        `• Plan: ${selectedMonths} mensualidades sin intereses de ${formatMXNDecimal(mensualidad)} MXN.\n` +
+                        `¿Podrían brindarme más información para visitarlo?`;
+
+            document.getElementById('whatsapp-cta').href = `https://wa.me/522281129348?text=${encodeURIComponent(msg)}`;
+        }
+
+        function setFilter(filterKey) {
+            currentFilter = filterKey;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.className = 'filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition shrink-0 bg-smal-sand text-smal-charcoal hover:bg-stone-200 border border-smal-sandBorder';
+            });
+            const activeBtn = document.getElementById(`btn-filter-${filterKey}`);
+            if (activeBtn) {
+                activeBtn.className = 'filter-btn active px-3.5 py-1.5 rounded-full text-xs font-bold transition shrink-0 bg-smal-charcoal text-smal-gold border border-smal-charcoal shadow-sm';
+            }
+            applyFilterVisuals();
+        }
+
+        function applyFilterVisuals() {
+            document.querySelectorAll('.lot-group').forEach(g => {
+                const status = g.getAttribute('data-status');
+                const manzana = g.getAttribute('data-manzana');
+                let matches = true;
+
+                if (currentFilter === 'disponible' || currentFilter === 'vendido') {
+                    matches = (status === currentFilter);
+                } else if (currentFilter === 'M1' || currentFilter === 'M2' || currentFilter === 'M3') {
+                    matches = (manzana === currentFilter);
+                }
+
+                if (matches) g.classList.remove('dimmed');
+                else g.classList.add('dimmed');
+            });
+        }
+
+        function selectNextAvailable() {
+            const next = LOTS_DATA.find(l => l.status === 'disponible');
+            if (next) {
+                setFilter('all');
+                selectLot(next.id);
+            }
+        }
+
+        function resetView() {
+            setFilter('all');
+            selectLot('M2-L1');
+            const pointer = document.getElementById('animated-pointer');
+            if (pointer) pointer.style.opacity = '1';
+        }
+
+        function getFallbackSceneSVG(item, idx) {
+            return `<svg viewBox="0 0 400 260" class="w-full h-full block"><rect width="400" height="260" fill="#111"/><text x="200" y="130" fill="#F5B81C" text-anchor="middle" font-size="14">${item.title}</text></svg>`;
+        }
+
+        function renderGallery() {
+            const grid = document.getElementById('gallery-grid');
+            if (!grid) return;
+
+            grid.innerHTML = GALLERY_ITEMS.map((item, idx) => `
+                <div onclick="openLightbox(${idx})" 
+                     class="group cursor-pointer rounded-xl overflow-hidden bg-smal-sand border border-smal-sandBorder hover:border-smal-gold shadow-sm hover:shadow-lg transition flex flex-col">
+                    <div class="relative aspect-[16/11] w-full bg-smal-black overflow-hidden">
+                        <img src="${item.file}" alt="${item.title}" 
+                             class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div class="w-full h-full hidden" style="display:none;">
+                            ${getFallbackSceneSVG(item, idx)}
+                        </div>
+                        <span class="absolute bottom-2 right-2 px-2.5 py-0.5 rounded-md bg-smal-charcoal/90 text-smal-gold text-[10px] font-extrabold border border-smal-gold/60">
+                            Ampliar 🔍
+                        </span>
+                    </div>
+                    <div class="p-3.5 flex-grow flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-display font-extrabold text-xs sm:text-sm text-smal-charcoal group-hover:text-smal-forest">
+                                ${item.title}
+                            </h3>
+                            <p class="text-[11px] text-stone-600 mt-1 line-clamp-2 leading-snug">
+                                ${item.desc}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function handleLocalPhotosUpload(event) {
+            const files = Array.from(event.target.files || []).slice(0, 5);
+            if (!files.length) return;
+            files.forEach((file, idx) => {
+                if (GALLERY_ITEMS[idx]) {
+                    GALLERY_ITEMS[idx].file = URL.createObjectURL(file);
+                }
+            });
+            renderGallery();
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            ['header-logo-img', 'footer-logo-img'].forEach(id => {
+                const img = document.getElementById(id);
+                if (img) {
+                    img.src = url;
+                    img.classList.remove('hidden');
+                    if (img.nextElementSibling) img.nextElementSibling.classList.add('hidden');
+                }
+            });
+        }
+
+        function openLightbox(index) {
+            const item = GALLERY_ITEMS[index];
+            if (!item) return;
+
+            document.getElementById('lightbox-title').textContent = item.title;
+            document.getElementById('lightbox-desc').textContent = item.desc;
+            document.getElementById('lightbox-visual').innerHTML = `
+                <img src="${item.file}" alt="${item.title}" class="max-h-[68vh] w-auto object-contain mx-auto"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div class="w-full max-w-2xl hidden" style="display:none;">
+                    ${getFallbackSceneSVG(item, index)}
+                </div>
+            `;
+            document.getElementById('photo-lightbox').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('photo-lightbox').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function formatMXN(num) {
+            return '$' + Math.round(num).toLocaleString('es-MX');
+        }
+
+        function formatMXNDecimal(num) {
+            return '$' + num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof updateStats === 'function') {
+                updateStats();
+            }
+            renderTopoMap();
+            updateDetailPanel();
+            renderGallery();
+
+            const dropzone = document.getElementById('gallery-dropzone');
+            if (dropzone) {
+                dropzone.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    dropzone.classList.add('ring-4', 'ring-smal-gold');
+                });
+                dropzone.addEventListener('dragleave', () => {
+                    dropzone.classList.remove('ring-4', 'ring-smal-gold');
+                });
+                dropzone.addEventListener('drop', e => {
+                    e.preventDefault();
+                    dropzone.classList.remove('ring-4', 'ring-smal-gold');
+                    const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/')).slice(0, 5);
+                    files.forEach((file, idx) => {
+                        if (GALLERY_ITEMS[idx]) GALLERY_ITEMS[idx].file = URL.createObjectURL(file);
+                    });
+                    if (files.length) renderGallery();
+                });
+            }
+        });
+    </script>
+</body>
+</html>
